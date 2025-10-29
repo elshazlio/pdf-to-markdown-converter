@@ -339,6 +339,10 @@ def main():
         help="Upload one or more PDF files to convert to Markdown"
     )
     
+    # Initialize session state for results
+    if 'conversion_results' not in st.session_state:
+        st.session_state.conversion_results = None
+    
     if uploaded_files:
         st.success(f"✅ Uploaded {len(uploaded_files)} file(s): {', '.join([f.name for f in uploaded_files])}")
         
@@ -372,6 +376,13 @@ def main():
             # Clear progress indicators
             progress_bar.empty()
             status_text.empty()
+            
+            # Store results in session state
+            st.session_state.conversion_results = results
+        
+        # Display results from session state (persists across reruns)
+        if st.session_state.conversion_results:
+            results = st.session_state.conversion_results
             
             # Display results
             success_count = sum(1 for r in results if r["success"])
@@ -415,29 +426,73 @@ def main():
             # Download all as ZIP
             if success_count > 0:
                 st.divider()
-                st.subheader("📦 Download All")
                 
-                # Let user customize ZIP filename
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    zip_filename = st.text_input(
-                        "ZIP filename",
-                        value="converted_pdfs.zip",
-                        help="Customize the name of your ZIP file",
-                        key="zip_filename"
-                    )
-                    # Ensure .zip extension
-                    if not zip_filename.endswith('.zip'):
-                        zip_filename += '.zip'
+                st.markdown("### Rename or download:")
                 
+                # Default filename
+                if len([r for r in results if r["success"]]) == 1:
+                    default_filename = results[0]["filename"].replace(".pdf", "_converted.zip")
+                else:
+                    default_filename = f"converted_{success_count}_pdfs.zip"
+                
+                # Add custom CSS for pulsating blue text input
+                st.markdown("""
+                <style>
+                @keyframes pulse-blue {
+                    0%, 100% {
+                        box-shadow: 0 0 8px rgba(33, 150, 243, 0.6), 0 0 15px rgba(33, 150, 243, 0.3);
+                    }
+                    50% {
+                        box-shadow: 0 0 25px rgba(33, 150, 243, 1), 0 0 40px rgba(33, 150, 243, 0.6);
+                    }
+                }
+                
+                /* More aggressive targeting - catches the specific text input */
+                div.stTextInput > div > div > input {
+                    animation: pulse-blue 2.5s ease-in-out infinite !important;
+                    border: 2px solid rgba(33, 150, 243, 0.7) !important;
+                    background: linear-gradient(to right, rgba(33, 150, 243, 0.05), rgba(33, 150, 243, 0.1)) !important;
+                    transition: all 0.3s ease !important;
+                    border-radius: 6px !important;
+                }
+                
+                div.stTextInput > div > div > input:focus {
+                    animation: none !important;
+                    box-shadow: 0 0 25px rgba(33, 150, 243, 0.9) !important;
+                    border: 2px solid rgba(33, 150, 243, 1) !important;
+                    background: rgba(33, 150, 243, 0.15) !important;
+                }
+                
+                div.stTextInput > div > div > input:hover:not(:focus) {
+                    border: 2px solid rgba(33, 150, 243, 0.9) !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # Text input for filename (always visible, with sexy glow)
+                zip_filename = st.text_input(
+                    "ZIP filename",
+                    value=default_filename,
+                    label_visibility="collapsed",
+                    key="zip_filename",
+                    placeholder="Enter filename..."
+                )
+                
+                # Ensure .zip extension
+                if not zip_filename.endswith('.zip'):
+                    zip_filename += '.zip'
+                
+                # Create and show download button
                 try:
                     zip_data = create_zip_file([r for r in results if r["success"]])
                     st.download_button(
-                        label="⬇️ Download All as ZIP (Markdown + Images)",
+                        label="⬇️ Download ZIP (Markdown + Images)",
                         data=zip_data,
                         file_name=zip_filename,
                         mime="application/zip",
-                        type="primary"
+                        type="primary",
+                        key=f"download_zip_{zip_filename}",
+                        use_container_width=True
                     )
                 except Exception as e:
                     st.error(f"Error creating ZIP file: {str(e)}")
