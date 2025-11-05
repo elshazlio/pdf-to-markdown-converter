@@ -233,8 +233,3 @@ For issues with:
 - **Streamlit**: [Streamlit Documentation](https://docs.streamlit.io/)
 - **PyMuPDF**: [PyMuPDF Documentation](https://pymupdf.readthedocs.io/)
 - **Tesseract**: [Tesseract Documentation](https://github.com/tesseract-ocr/tesseract)
-
----
-
-**Built with ❤️ using Python and open-source tools**
-
